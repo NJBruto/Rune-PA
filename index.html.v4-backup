@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#020609">
+<title>RUNE | Personal Assistant</title>
+
+<style>
+:root {
+    --cyan: #00eaff;
+    --blue: #008cff;
+    --green: #00ff78;
+    --muted: #467987;
+    --panel: rgba(2, 18, 28, .72);
+    --line: rgba(0, 190, 255, .24);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    width: 100%;
+    min-height: 100%;
+    background: #020609;
+    color: var(--cyan);
+    font-family: Consolas, "Courier New", monospace;
+}
+
+body {
+    min-height: 100dvh;
+    overflow-x: hidden;
+    opacity: 0;
+    animation: pageIn 1.3s ease forwards;
+    background:
+        radial-gradient(ellipse at 50% 42%,
+            rgba(0, 45, 65, .23), transparent 52%),
+        #020609;
+}
+
+@keyframes pageIn {
+    to { opacity: 1; }
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+    opacity: .13;
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0, 150, 255, .12) 4px
+    );
+}
+
+button { font: inherit; }
+
+#app {
+    width: 100%;
+    max-width: 1500px;
+    min-height: 100dvh;
+    margin: auto;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* HEADER */
+
+.topbar {
+    min-height: 66px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 15px;
+}
+
+.brand {
+    font-size: 23px;
+    font-weight: bold;
+    letter-spacing: 7px;
+    color: #d4fbff;
+    text-shadow: 0 0 15px rgba(0, 220, 255, .55);
+}
+
+.brand-sub {
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: 2px;
+}
+
+.header-right {
+    text-align: right;
+    font-size: 10px;
+    line-height: 1.9;
+}
+
+.live-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 6px;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+}
+
+.small-muted { color: var(--muted); }
+.green { color: var(--green); }
+.yellow { color: #ffd36b; }
+.red { color: #ff6478; }
+
+/* MAIN GRID */
+
+.dashboard {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(190px, 1fr)
+                           minmax(280px, 1.5fr)
+                           minmax(190px, 1fr);
+    gap: 15px;
+    padding-top: 20px;
+    padding-bottom: 18px;
+    align-items: stretch;
+}
+
+.column {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    min-width: 0;
+}
+
+.panel {
+    border: 1px solid var(--line);
+    background: linear-gradient(
+        145deg, rgba(3, 24, 35, .8), var(--panel)
+    );
+    position: relative;
+    padding: 15px;
+    min-width: 0;
+    box-shadow: inset 0 0 22px rgba(0, 120, 180, .025);
+}
+
+.panel::before,
+.panel::after {
+    content: "";
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    pointer-events: none;
+}
+
+.panel::before {
+    top: -1px;
+    left: -1px;
+    border-top: 2px solid var(--cyan);
+    border-left: 2px solid var(--cyan);
+}
+
+.panel::after {
+    bottom: -1px;
+    right: -1px;
+    border-bottom: 2px solid var(--blue);
+    border-right: 2px solid var(--blue);
+}
+
+.panel-title {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #8eefff;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(0, 180, 255, .15);
+    margin-bottom: 13px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(0, 150, 200, .09);
+    font-size: 10px;
+}
+
+.stat-row:last-child { border-bottom: 0; }
+
+.stat-value {
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.memory-box {
+    padding: 12px 9px;
+    border: 1px dashed rgba(255, 211, 107, .3);
+    color: #ffd36b;
+    background: rgba(255, 211, 107, .035);
+    font-size: 10px;
+    line-height: 1.8;
+}
+
+.description {
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.8;
+    margin-top: 10px;
+}
+
+/* CENTRAL REACTOR */
+
+.center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+}
+
+.greeting {
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 2px;
+    line-height: 2;
+    margin-bottom: 4px;
+    color: #8eefff;
+}
+
+.reactor {
+    width: min(100%, 410px);
+    aspect-ratio: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    isolation: isolate;
+}
+
+.ring {
+    position: absolute;
+    inset: 8%;
+    border: 1px solid rgba(0, 175, 255, .48);
+    border-radius: 50%;
+    will-change: transform;
+}
+
+.r1 {
+    border-top-color: var(--cyan);
+    border-bottom-color: transparent;
+    animation: spin 12s linear infinite;
+}
+
+.r2 {
+    inset: 15%;
+    border: 2px solid rgba(0, 125, 255, .7);
+    border-left-color: transparent;
+    border-right-color: var(--cyan);
+    animation: spinReverse 9s linear infinite;
+}
+
+.r3 {
+    inset: 22%;
+    border-top-color: transparent;
+    border-bottom-color: #008cff;
+    animation: spin 16s linear infinite;
+}
+
+.r4 {
+    inset: 2%;
+    border-style: dashed;
+    border-color: rgba(0, 110, 255, .4);
+    animation: spinReverse 32s linear infinite;
+}
+
+.r5 {
+    inset: 29%;
+    border-style: dotted;
+    border-color: rgba(0, 220, 255, .35);
+    animation: spin 20s linear infinite;
+}
+
+.orbit {
+    position: absolute;
+    width: 100%;
+    height: 35%;
+    border: 1px solid rgba(0, 200, 255, .55);
+    border-radius: 50%;
+    transform: rotate(-35deg);
+}
+
+.orbit2 {
+    transform: rotate(35deg);
+    border-color: rgba(0, 100, 255, .6);
+}
+
+.core-wrap {
+    width: 30%;
+    height: 30%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 5;
+    transform: scale(1);
+    transition: transform .12s ease-out;
+    will-change: transform;
+}
+
+.halo {
+    position: absolute;
+    inset: -30%;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle, rgba(0, 255, 90, .23),
+        rgba(0, 255, 90, .04) 50%, transparent 72%
+    );
+    filter: blur(9px);
+    animation: haloPulse 3s ease-in-out infinite;
+}
+
+.core {
+    width: 64%;
+    height: 64%;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle at 33% 27%,
+        #edfff0 0%, #80ffab 12%, #16ff69 32%,
+        #00bc49 60%, #005d2c 83%, #002b18 100%
+    );
+    box-shadow:
+        0 0 12px rgba(0, 255, 90, .95),
+        0 0 30px rgba(0, 255, 90, .6),
+        0 0 65px rgba(0, 255, 90, .25);
+    animation: corePulse 3s ease-in-out infinite;
+    transition: box-shadow .15s;
+}
+
+.core::before {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    border: 1px solid rgba(0, 255, 100, .6);
+    border-radius: 50%;
+    animation: haloPulse 4s ease-in-out infinite;
+}
+
+.particle {
+    width: 5px;
+    height: 5px;
+    position: absolute;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 10px var(--cyan);
+    offset-path: ellipse(43% 43% at 50% 50%);
+    animation: travel 8s linear infinite;
+}
+
+.p2 {
+    width: 3px;
+    height: 3px;
+    background: var(--green);
+    box-shadow: 0 0 9px var(--green);
+    animation-duration: 11s;
+    animation-delay: -4s;
+}
+
+.p3 {
+    animation-duration: 14s;
+    animation-delay: -7s;
+}
+
+.core-status {
+    text-align: center;
+    font-size: 10px;
+    line-height: 2;
+    letter-spacing: 2px;
+    color: var(--cyan);
+}
+
+.core-status span {
+    display: block;
+    font-size: 9px;
+    color: var(--muted);
+}
+
+/* BUTTONS */
+
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.btn {
+    padding: 11px 12px;
+    border: 1px solid rgba(0, 200, 255, .45);
+    color: #8eefff;
+    background: rgba(0, 100, 180, .08);
+    cursor: pointer;
+    font-size: 9px;
+    letter-spacing: 1px;
+    transition: background .2s, border-color .2s;
+}
+
+.btn:hover {
+    background: rgba(0, 160, 255, .15);
+    border-color: var(--cyan);
+}
+
+.btn:disabled {
+    opacity: .5;
+    cursor: wait;
+}
+
+.btn.secondary {
+    border-color: rgba(0, 255, 120, .35);
+    color: var(--green);
+}
+
+/* SOUND METER */
+
+.meter {
+    height: 5px;
+    background: #102630;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.meter-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #00aaff, #00ff78);
+    box-shadow: 0 0 8px #00eaff;
+    transition: width .08s linear;
+}
+
+.console {
+    min-height: 150px;
+    max-height: 260px;
+    overflow: auto;
+    overflow-wrap: anywhere;
+    font-size: 10px;
+    line-height: 1.8;
+    scrollbar-width: thin;
+    scrollbar-color: #15536a #031019;
+}
+
+.log-line {
+    white-space: pre-wrap;
+    color: #77a6b7;
+}
+
+.log-line .time { color: #315d6e; }
+.log-line .ok { color: var(--green); }
+.log-line .warn { color: #ffd36b; }
+.log-line .event { color: var(--cyan); }
+
+.log-line .error { color: #ff6478; }
+
+.footer {
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    color: #355b69;
+    font-size: 9px;
+    letter-spacing: 1px;
+}
+
+/* ANIMATIONS */
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes spinReverse {
+    from { transform: rotate(360deg); }
+    to { transform: rotate(0deg); }
+}
+
+@keyframes corePulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.12); }
+}
+
+@keyframes haloPulse {
+    0%, 100% { transform: scale(.94); opacity: .6; }
+    50% { transform: scale(1.1); opacity: 1; }
+}
+
+@keyframes travel {
+    from { offset-distance: 0%; }
+    to { offset-distance: 100%; }
+}
+
+@media (max-width: 850px) {
+    #app { padding: 15px; }
+
+    .dashboard {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .center {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
+
+    .left-column { grid-column: 1; }
+    .right-column { grid-column: 2; }
+
+    .reactor { width: min(88vw, 380px); }
+}
+
+@media (max-width: 480px) {
+    #app { padding: 12px; }
+
+    .brand { font-size: 20px; }
+    .header-right { font-size: 9px; }
+
+    .dashboard { gap: 10px; }
+    .column { gap: 10px; }
+
+    .panel { padding: 11px; }
+    .panel-title { font-size: 9px; letter-spacing: 1px; }
+
+    .stat-row { font-size: 9px; gap: 5px; }
+    .memory-box, .description { font-size: 9px; }
+
+    .reactor { width: min(94vw, 340px); }
+
+    .btn { padding: 10px 8px; font-size: 8px; }
+
+    .console { font-size: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ring, .halo, .core, .core::before, .particle {
+        animation-duration: 30s;
+    }
+}
+
+/* RUNE V4: agent initialization overlay */
+#bootScreen {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 25px;
+    background: #020609;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity .8s ease, visibility .8s;
+}
+
+#bootScreen.bootDone {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.bootContent {
+    width: min(100%, 390px);
+    text-align: center;
+}
+
+.bootLogo {
+    font-size: 32px;
+    letter-spacing: 10px;
+    padding-left: 10px;
+    color: #d4fbff;
+    text-shadow: 0 0 20px rgba(0,220,255,.7);
+    margin-bottom: 35px;
+}
+
+.bootLabel {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #00eaff;
+}
+
+.bootDetail {
+    font-size: 10px;
+    line-height: 1.8;
+    color: #467987;
+    margin-top: 14px;
+    min-height: 18px;
+}
+
+.bootTrack {
+    width: 100%;
+    height: 4px;
+    margin-top: 24px;
+    background: #102630;
+    border: 1px solid rgba(0,190,255,.2);
+    overflow: hidden;
+}
+
+#bootProgress {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg,#008cff,#00ff78);
+    box-shadow: 0 0 12px #00d9ff;
+    transition: width .25s ease;
+}
+
+.bootPercent {
+    font-size: 10px;
+    color: #80eaff;
+    margin-top: 10px;
+    text-align: right;
+}
+
+#bootError {
+    display: none;
+    color: #ff6478;
+    font-size: 11px;
+    line-height: 1.8;
+    margin-top: 20px;
+}
+
+#retryBoot {
+    display: none;
+    margin-top: 15px;
+    padding: 10px 15px;
+    color: #8eefff;
+    border: 1px solid rgba(0,200,255,.45);
+    background: #06141c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #bootScreen, #bootProgress {
+        transition-duration: .01ms;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div id="bootScreen" role="status" aria-live="polite">
+    <div class="bootContent">
+        <div class="bootLogo">RUNE</div>
+        <div class="bootLabel" id="bootLabel">
+            AGENT INITIALISING...
+        </div>
+        <div class="bootTrack">
+            <div id="bootProgress"></div>
+        </div>
+        <div class="bootPercent" id="bootPercent">0%</div>
+        <div class="bootDetail" id="bootDetail">
+            Preparing local browser agent
+        </div>
+        <div id="bootError"></div>
+        <button id="retryBoot" type="button">RETRY INITIALIZATION</button>
+    </div>
+</div>
+
+<div id="app">
+
+<header class="topbar">
+    <div>
+        <div class="brand">RUNE</div>
+        <div class="brand-sub">PERSONAL ASSISTANT // V3</div>
+    </div>
+
+    <div class="header-right">
+        <div><span class="live-dot"></span><span id="systemBadge">STARTING</span></div>
+        <div class="small-muted" id="clock">--:--:--</div>
+        <div class="small-muted">FRONTEND PROTOTYPE</div>
+    </div>
+</header>
+
+<main class="dashboard">
+
+    <!-- LEFT: ACTUAL RUNTIME STATE -->
+    <aside class="column left-column">
+
+        <section class="panel">
+            <div class="panel-title">01 // SYSTEM STATUS</div>
+
+            <div class="stat-row">
+                <span class="small-muted">Interface</span>
+                <span class="stat-value green" id="uiStatus">LOADING</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="small-muted">Audio API</span>
+                <span class="stat-value" id="audioStatus">NOT STARTED</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="small-muted">Microphone</span>
+                <span class="stat-value" id="micStatus">OFF</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="small-muted">Sound state</span>
+                <span class="stat-value" id="soundStatus">IDLE</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="small-muted">Audio output</span>
+                <span class="stat-value" id="outputStatus">LOCKED / UNKNOWN</span>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-title">02 // MEMORY MODULE</div>
+
+            <div class="memory-box">
+                [ NOT INITIALIZED ]<br>
+                Persistent memory: OFF<br>
+                Storage engine: NONE<br>
+                Records loaded: 0
+            </div>
+
+            <p class="description">
+                Rune's memory module has not been implemented.
+                No memories are being stored by this prototype.
+            </p>
+        </section>
+
+        <section class="panel">
+            <div class="panel-title">03 // ENVIRONMENT</div>
+
+            <div class="stat-row">
+                <span class="small-muted">Browser</span>
+                <span class="stat-value" id="browserStatus">DETECTING</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="small-muted">Secure context</span>
+                <span class="stat-value" id="secureStatus">CHECKING</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="small-muted">Connection</span>
+                <span class="stat-value" id="networkStatus">CHECKING</span>
+            </div>
+        </section>
+
+    </aside>
+
+    <!-- CENTRE: RUNE CORE -->
+    <section class="center">
+
+        <div class="greeting" id="greetingText">
+            HEY SIR, I AM RUNE.<br>
+            <span class="small-muted">SYSTEM AWAITS YOUR INPUT</span>
+        </div>
+
+        <div class="reactor">
+            <div class="ring r4"></div>
+            <div class="ring r1"></div>
+            <div class="ring r2"></div>
+            <div class="ring r3"></div>
+            <div class="ring r5"></div>
+
+            <div class="orbit"></div>
+            <div class="orbit orbit2"></div>
+
+            <div class="particle"></div>
+            <div class="particle p2"></div>
+            <div class="particle p3"></div>
+
+            <div class="core-wrap" id="coreWrap">
+                <div class="halo"></div>
+                <div class="core" id="core"></div>
+            </div>
+        </div>
+
+        <div class="core-status" id="coreStatus">
+            INITIALIZING
+            <span id="coreSubstatus">Loading interface modules</span>
+        </div>
+
+        <div class="controls">
+            <button class="btn secondary" id="startMic">
+                ENABLE MICROPHONE
+            </button>
+            <button class="btn" id="wakeButton">
+                PLAY WAKE SOUND
+            </button>
+        </div>
+
+        <div style="width: min(100%, 340px); margin-top: 20px;">
+            <div class="stat-row">
+                <span class="small-muted">INPUT LEVEL</span>
+                <span id="levelText">0%</span>
+            </div>
+            <div class="meter">
+                <div class="meter-fill" id="meterFill"></div>
+            </div>
+            <p class="description">
+                Sound level is estimated locally from microphone input.
+                Speech recognition is not enabled.
+            </p>
+        </div>
+
+    </section>
+
+    <!-- RIGHT: ACTUAL EVENTS -->
+    <aside class="column right-column">
+
+        <section class="panel">
+            <div class="panel-title">04 // RUNTIME</div>
+
+            <div class="stat-row">
+                <span class="small-muted">Session</span>
+                <span class="stat-value" id="sessionStatus">STARTING</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="small-muted">Uptime</span>
+                <span class="stat-value" id="uptime">0s</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="small-muted">Animation</span>
+                <span class="stat-value green">CSS ACTIVE</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="small-muted">AI engine</span>
+                <span class="stat-value yellow">NOT CONNECTED</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="small-muted">Command engine</span>
+                <span class="stat-value yellow">NOT IMPLEMENTED</span>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-title">05 // SYSTEM CONSOLE</div>
+            <div class="console" id="console" aria-live="polite"></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-title">06 // AUDIO ANALYSIS</div>
+
+            <div class="stat-row">
+                <span class="small-muted">Noise baseline</span>
+                <span class="stat-value" id="noiseStatus">UNCALIBRATED</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="small-muted">Detection</span>
+                <span class="stat-value" id="detectionStatus">INACTIVE</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="small-muted">Last event</span>
+                <span class="stat-value" id="lastEvent">NONE</span>
+            </div>
+
+            <p class="description">
+                Adaptive noise calibration and separate activation
+                and release thresholds reduce false triggers.
+            </p>
+        </section>
+
+    </aside>
+</main>
+
+<footer class="footer">
+    <span>RUNE // LOCAL PROTOTYPE</span>
+    <span>MEMORY: UNINITIALIZED</span>
+    <span id="footerMode">STANDBY</span>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+
+/* RUNE V3: browser-only prototype.
+   No backend, cloud AI, or persistent memory. */
+
+const $ = id => document.getElementById(id);
+
+const startedAt = performance.now();
+
+let audioContext = null;
+let analyser = null;
+let stream = null;
+let source = null;
+let rafId = null;
+let soundEnabled = false;
+
+let noiseFloor = 0;
+let calibrated = false;
+let calibrationSamples = [];
+let calibrationStart = 0;
+
+let smoothedRms = 0;
+let detected = false;
+let aboveCount = 0;
+let belowCount = 0;
+let lastSoundEvent = 0;
+let lastStatusLog = "";
+
+const START_THRESHOLD = 0.025;
+const RELEASE_THRESHOLD = 0.015;
+const EVENT_COOLDOWN = 900;
+
+function timestamp() {
+    return new Date().toLocaleTimeString([], {
+        hour12: false
+    });
+}
+
+function log(message, type = "event") {
+    const line = document.createElement("div");
+    line.className = "log-line";
+
+    const time = document.createElement("span");
+    time.className = "time";
+    time.textContent = "[" + timestamp() + "] ";
+
+    const content = document.createElement("span");
+    content.className = type;
+    content.textContent = message;
+
+    line.append(time, content);
+    $("console").appendChild(line);
+
+    // Keep the newest 70 real event entries.
+    while ($("console").children.length > 70) {
+        $("console").firstElementChild.remove();
+    }
+
+    $("console").scrollTop = $("console").scrollHeight;
+}
+
+function setCoreStatus(main, detail) {
+    $("coreStatus").childNodes[0].textContent = main;
+    $("coreSubstatus").textContent = detail;
+}
+
+function setSoundStatus(message) {
+    $("soundStatus").textContent = message;
+    $("lastEvent").textContent = timestamp();
+}
+
+function getBrowserName() {
+    const ua = navigator.userAgent;
+
+    if (/Edg\//.test(ua)) return "EDGE";
+    if (/Firefox\//.test(ua)) return "FIREFOX";
+    if (/Chrome\//.test(ua)) return "CHROME";
+    if (/Safari\//.test(ua)) return "SAFARI";
+
+    return "OTHER";
+}
+
+/* Startup: report what really loaded. */
+
+function initializeInterface() {
+    $("uiStatus").textContent = "READY";
+    $("systemBadge").textContent = "INTERFACE ONLINE";
+    $("sessionStatus").textContent = "ACTIVE";
+
+    $("browserStatus").textContent = getBrowserName();
+
+    const secure = window.isSecureContext;
+    $("secureStatus").textContent = secure ? "YES" : "NO";
+    $("secureStatus").className =
+        "stat-value " + (secure ? "green" : "yellow");
+
+    $("networkStatus").textContent = navigator.onLine
+        ? "ONLINE"
+        : "OFFLINE";
+
+    $("audioStatus").textContent =
+        window.AudioContext || window.webkitAudioContext
+            ? "AVAILABLE"
+            : "UNAVAILABLE";
+
+    $("outputStatus").textContent = "NOT TESTED";
+
+    setCoreStatus("SYSTEM READY", "Waiting for user interaction");
+    log("Rune interface loaded.", "ok");
+    log("CSS reactor animations initialized.", "ok");
+    log("AI engine is not connected.", "warn");
+    log("Memory module: not initialized.", "warn");
+    log("Microphone remains off until enabled.", "event");
+
+    // Attempt to play the startup sound. Browsers may block
+    // audio until the user interacts with the page.
+    // V4 plays the wake sound after agent initialization.
+}
+
+initializeInterface();
+
+/* Live clock and actual page-session uptime. */
+
+function updateClock() {
+    $("clock").textContent = new Date().toLocaleTimeString();
+    const seconds = Math.floor((performance.now() - startedAt) / 1000);
+    $("uptime").textContent = seconds + "s";
+}
+
+updateClock();
+setInterval(updateClock, 1000);
+
+window.addEventListener("online", () => {
+    $("networkStatus").textContent = "ONLINE";
+    log("Browser reports network connection available.", "ok");
+});
+
+window.addEventListener("offline", () => {
+    $("networkStatus").textContent = "OFFLINE";
+    log("Browser reports network connection unavailable.", "warn");
+});
+
+/* Startup sound: synthesized locally using Web Audio.
+   No sound file or external service is required. */
+
+let wakeSoundPlayed = false;
+let wakeSoundQueued = false;
+
+async function tryWakeSound(isStartup = false) {
+    if (wakeSoundPlayed) return;
+
+    try {
+        if (!audioContext) {
+            const AudioCtor =
+                window.AudioContext || window.webkitAudioContext;
+
+            if (!AudioCtor) {
+                $("outputStatus").textContent = "UNSUPPORTED";
+                return;
+            }
+
+            audioContext = new AudioCtor();
+        }
+
+        if (audioContext.state !== "running") {
+            await audioContext.resume();
+        }
+
+        if (audioContext.state !== "running") {
+            wakeSoundQueued = true;
+            $("outputStatus").textContent = "AWAITING INTERACTION";
+            return;
+        }
+
+        const now = audioContext.currentTime;
+
+        function tone(frequency, start, duration, volume) {
+            const oscillator = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+
+            oscillator.type = "sine";
+            oscillator.frequency.setValueAtTime(
+                frequency, now + start
+            );
+
+            gain.gain.setValueAtTime(0.0001, now + start);
+            gain.gain.exponentialRampToValueAtTime(
+                volume, now + start + 0.045
+            );
+            gain.gain.exponentialRampToValueAtTime(
+                0.0001, now + start + duration
+            );
+
+            oscillator.connect(gain);
+            gain.connect(audioContext.destination);
+
+            oscillator.start(now + start);
+            oscillator.stop(now + start + duration + 0.02);
+        }
+
+        // Three short, soft rising tones.
+        tone(440, 0.00, 0.22, 0.075);
+        tone(587.33, 0.19, 0.26, 0.065);
+        tone(783.99, 0.42, 0.42, 0.055);
+
+        wakeSoundPlayed = true;
+        wakeSoundQueued = false;
+
+        $("outputStatus").textContent = "ACTIVE";
+        log(
+            isStartup
+                ? "Startup chime scheduled."
+                : "Rune wake sound played.",
+            "ok"
+        );
+
+    } catch (error) {
+        wakeSoundQueued = true;
+        $("outputStatus").textContent = "AWAITING INTERACTION";
+        console.info("Audio output requires interaction:", error);
+    }
+}
+
+// First interaction unlocks audio if autoplay was blocked.
+document.addEventListener("pointerdown", function unlockAudio() {
+    if (!wakeSoundPlayed && wakeSoundQueued) {
+        tryWakeSound(false);
+    }
+}, { once: true });
+
+$("wakeButton").addEventListener("click", async () => {
+    wakeSoundPlayed = false;
+    wakeSoundQueued = false;
+    await tryWakeSound(false);
+
+    if (!wakeSoundPlayed) {
+        log("Wake sound could not be played yet.", "warn");
+    }
+});
+
+/* Adaptive sound detection. */
+
+$("startMic").addEventListener("click", async () => {
+    if (soundEnabled) {
+        stopMicrophone();
+        return;
+    }
+
+    $("startMic").disabled = true;
+    $("startMic").textContent = "CONNECTING...";
+    setCoreStatus("MICROPHONE", "Requesting browser permission");
+    log("Microphone permission requested.");
+
+    try {
+        const AudioCtor =
+            window.AudioContext || window.webkitAudioContext;
+
+        if (!AudioCtor) {
+            throw new Error("Web Audio API is unavailable.");
+        }
+
+        // Start audio after the user's button click.
+        if (!audioContext || audioContext.state === "closed") {
+            audioContext = new AudioCtor();
+        }
+
+        await audioContext.resume();
+
+        const newStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: false,
+                autoGainControl: false
+            }
+        });
+
+        stream = newStream;
+
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 1024;
+        analyser.smoothingTimeConstant = 0.35;
+
+        source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+
+        soundEnabled = true;
+        detected = false;
+        aboveCount = 0;
+        belowCount = 0;
+        smoothedRms = 0;
+        noiseFloor = 0;
+        calibrationSamples = [];
+        calibrationStart = performance.now();
+        calibrated = false;
+
+        $("micStatus").textContent = "ACTIVE";
+        $("micStatus").className = "stat-value green";
+        $("audioStatus").textContent = "RUNNING";
+        $("startMic").textContent = "DISABLE MICROPHONE";
+        $("detectionStatus").textContent = "CALIBRATING";
+
+        $("footerMode").textContent = "MICROPHONE ACTIVE";
+        $("systemBadge").textContent = "AUDIO ACTIVE";
+
+        setCoreStatus("LISTENING", "Calibrating ambient sound");
+        log("Microphone stream started.", "ok");
+        log("Calibrating ambient noise for 1.5 seconds.");
+
+        // If the startup sound was blocked, the microphone button
+        // is a user gesture that can unlock audio playback.
+        if (!wakeSoundPlayed) await tryWakeSound(false);
+
+        detectSound();
+
+    } catch (error) {
+        console.error(error);
+
+        log(
+            "Microphone startup failed: " + error.message,
+            "error"
+        );
+
+        setCoreStatus("MICROPHONE ERROR", "Check permission and browser");
+        $("micStatus").textContent = "UNAVAILABLE";
+        $("micStatus").className = "stat-value red";
+        $("detectionStatus").textContent = "INACTIVE";
+        $("startMic").textContent = "RETRY MICROPHONE";
+        $("footerMode").textContent = "STANDBY";
+        $("systemBadge").textContent = "INTERFACE ONLINE";
+
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+
+        if (source) {
+            source.disconnect();
+            source = null;
+        }
+
+        soundEnabled = false;
+
+    } finally {
+        $("startMic").disabled = false;
+    }
+});
+
+function detectSound() {
+    if (!soundEnabled || !analyser) return;
+
+    const data = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(data);
+
+    let sum = 0;
+
+    for (let i = 0; i < data.length; i++) {
+        sum += data[i] * data[i];
+    }
+
+    const rms = Math.sqrt(sum / data.length);
+
+    // Calibration gathers the actual local room-noise level.
+    if (!calibrated) {
+        calibrationSamples.push(rms);
+
+        const elapsed = performance.now() - calibrationStart;
+
+        if (elapsed < 1500) {
+            $("noiseStatus").textContent = "CALIBRATING";
+            $("detectionStatus").textContent = "CALIBRATING";
+            $("levelText").textContent =
+                Math.round(rms * 1000) / 10 + "%";
+            $("meterFill").style.width =
+                Math.min(100, rms * 1000) + "%";
+
+            rafId = requestAnimationFrame(detectSound);
+            return;
+        }
+
+        // The median resists occasional loud samples during setup.
+        const sorted = calibrationSamples.slice().sort((a, b) => a - b);
+        const middle = Math.floor(sorted.length / 2);
+
+        noiseFloor = sorted.length
+            ? sorted[middle]
+            : 0;
+
+        calibrated = true;
+
+        $("noiseStatus").textContent =
+            (noiseFloor * 1000).toFixed(1) + " / 1000";
+
+        $("detectionStatus").textContent = "ACTIVE";
+        setCoreStatus("LISTENING", "Ambient sound calibrated");
+        log("Ambient noise calibration completed.", "ok");
+    }
+
+    // Smooth amplitude with a faster rise and slower fall.
+    const smoothing = rms > smoothedRms ? 0.38 : 0.12;
+    smoothedRms += (rms - smoothedRms) * smoothing;
+
+    // Slowly adapt the noise floor only when no event is detected.
+    // Limit its speed so a sustained sound is not quickly absorbed.
+    if (!detected) {
+        noiseFloor += (smoothedRms - noiseFloor) * 0.008;
+    }
+
+    const delta = Math.max(0, smoothedRms - noiseFloor);
+
+    // Dynamic thresholds, with minimums to limit background noise.
+    const startThreshold = Math.max(
+        START_THRESHOLD,
+        noiseFloor * 2.8
+    );
+
+    const releaseThreshold = Math.max(
+        RELEASE_THRESHOLD,
+        noiseFloor * 1.7
+    );
+
+    const normalized = Math.min(1, delta * 9);
+    const scale = 1 + normalized * 0.65;
+
+    $("coreWrap").style.transform = `scale(${scale})`;
+
+    const glow = 1 + normalized * 1.8;
+    const blur = 30 + normalized * 45;
+
+    $("core").style.boxShadow = `
+        0 0 ${12 * glow}px rgba(0,255,90,.95),
+        0 0 ${blur}px rgba(0,255,90,.65),
+        0 0 ${blur * 1.8}px rgba(0,255,90,.28)
+    `;
+
+    // UI meter reflects the input level, not recognized speech.
+    const meter = Math.min(100, smoothedRms * 1000);
+    $("meterFill").style.width = meter + "%";
+    $("levelText").textContent = meter.toFixed(1) + "%";
+
+    $("noiseStatus").textContent =
+        (noiseFloor * 1000).toFixed(1) + " / 1000";
+
+    // Hysteresis and consecutive frames prevent rapid flickering.
+    if (!detected) {
+        if (delta > startThreshold) {
+            aboveCount++;
+        } else {
+            aboveCount = 0;
+        }
+
+        if (aboveCount >= 4) {
+            detected = true;
+            aboveCount = 0;
+            belowCount = 0;
+            lastSoundEvent = performance.now();
+
+            setSoundStatus("DETECTED");
+            $("detectionStatus").textContent = "SOUND ACTIVE";
+
+            setCoreStatus("SOUND DETECTED", "Input level above threshold");
+            log("Sound event detected by amplitude threshold.", "event");
+        }
+    } else {
+        if (delta < releaseThreshold) {
+            belowCount++;
+        } else {
+            belowCount = 0;
+        }
+
+        // Require sustained quiet before releasing the sound state.
+        if (belowCount >= 12) {
+            detected = false;
+            belowCount = 0;
+            aboveCount = 0;
+
+            setSoundStatus("QUIET");
+            $("detectionStatus").textContent = "ACTIVE";
+
+            setCoreStatus("LISTENING", "Awaiting sound input");
+            log("Sound event ended; input returned to quiet.", "ok");
+        }
+    }
+
+    rafId = requestAnimationFrame(detectSound);
+}
+
+function stopMicrophone() {
+    soundEnabled = false;
+
+    if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+    }
+
+    if (source) {
+        source.disconnect();
+        source = null;
+    }
+
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+
+    analyser = null;
+    detected = false;
+    calibrated = false;
+    calibrationSamples = [];
+    smoothedRms = 0;
+
+    $("coreWrap").style.transform = "scale(1)";
+    $("core").style.boxShadow = "";
+    $("meterFill").style.width = "0%";
+    $("levelText").textContent = "0%";
+
+    $("micStatus").textContent = "OFF";
+    $("micStatus").className = "stat-value";
+    $("audioStatus").textContent =
+        audioContext && audioContext.state !== "closed"
+            ? audioContext.state.toUpperCase()
+            : "STOPPED";
+
+    $("soundStatus").textContent = "IDLE";
+    $("detectionStatus").textContent = "INACTIVE";
+    $("noiseStatus").textContent = "UNCALIBRATED";
+
+    $("startMic").textContent = "ENABLE MICROPHONE";
+    $("footerMode").textContent = "STANDBY";
+    $("systemBadge").textContent = "INTERFACE ONLINE";
+
+    setCoreStatus("SYSTEM READY", "Microphone disabled");
+    log("Microphone stream stopped.", "warn");
+}
+
+window.addEventListener("pagehide", () => {
+    soundEnabled = false;
+
+    if (rafId !== null) cancelAnimationFrame(rafId);
+
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+    }
+});
+
+/* V4: actual local module loading and startup sequence. */
+
+const bootSleep = ms =>
+    new Promise(resolve => setTimeout(resolve, ms));
+
+function setBootProgress(percent, detail) {
+    $("bootProgress").style.width = percent + "%";
+    $("bootPercent").textContent = percent + "%";
+    $("bootDetail").textContent = detail;
+}
+
+async function bootRune() {
+    const screen = $("bootScreen");
+    const retry = $("retryBoot");
+    const errorBox = $("bootError");
+
+    retry.style.display = "none";
+    errorBox.style.display = "none";
+    screen.classList.remove("bootDone");
+
+    $("bootLabel").textContent = "AGENT INITIALISING...";
+    setBootProgress(0, "Preparing local browser agent");
+
+    $("systemBadge").textContent = "INITIALISING";
+    $("uiStatus").textContent = "STARTING";
+    $("sessionStatus").textContent = "INITIALISING";
+    setCoreStatus("INITIALIZING", "Loading local agent module");
+
+    log("Rune startup sequence started.", "event");
+
+    try {
+        // Stage 1: begin the visible loading transition.
+        setBootProgress(12, "Checking browser environment");
+        await bootSleep(250);
+
+        // Stage 2: dynamically load agent.js from this same server.
+        setBootProgress(32, "Loading local agent module");
+        const module = await import("./agent.js");
+
+        log("Local agent module downloaded by browser.", "ok");
+        setBootProgress(58, "Initializing agent");
+        await bootSleep(250);
+
+        // Stage 3: execute the module's actual initializer.
+        const agent = await module.initializeAgent();
+
+        if (!agent || agent.initialized !== true) {
+            throw new Error("Agent initialization did not complete.");
+        }
+
+        window.RUNE_AGENT = agent;
+
+        setBootProgress(78, "Checking available capabilities");
+        await bootSleep(250);
+
+        // Initialize the existing V3 interface and console.
+        initializeInterface();
+
+        $("uiStatus").textContent = "READY";
+        $("sessionStatus").textContent = "ACTIVE";
+        $("systemBadge").textContent = "AGENT READY";
+
+        log("Agent initialization completed.", "ok");
+        log("Agent version: " + agent.version, "ok");
+        log(
+            "Audio API: " +
+            (agent.checks.audio ? "available" : "unavailable"),
+            agent.checks.audio ? "ok" : "warn"
+        );
+        log(
+            "Microphone API: " +
+            (agent.checks.microphone ? "available" : "unavailable"),
+            agent.checks.microphone ? "ok" : "warn"
+        );
+
+        setBootProgress(100, "Rune is ready");
+        await bootSleep(400);
+
+        $("bootLabel").textContent = "INITIALIZATION COMPLETE";
+
+        // Try the real wake sound. The browser may block autoplay.
+        await tryWakeSound(true);
+
+        screen.classList.add("bootDone");
+
+        $("greetingText").innerHTML =
+            'Hey there, How can I help you today?';
+
+        setCoreStatus(
+            "RUNE IS READY",
+            "Waiting for your input"
+        );
+
+        log("Rune interface is ready for interaction.", "ok");
+
+        if (!wakeSoundPlayed) {
+            $("outputStatus").textContent = "AWAITING INTERACTION";
+            log(
+                "Browser requires a user gesture for wake audio.",
+                "warn"
+            );
+        }
+
+    } catch (error) {
+        console.error(error);
+
+        $("bootLabel").textContent = "INITIALIZATION FAILED";
+        $("bootDetail").textContent =
+            "The local agent could not start.";
+        $("bootProgress").style.width = "100%";
+        $("bootProgress").style.background = "#ff6478";
+        errorBox.textContent =
+            error.message + " Check that agent.js exists and reload.";
+        errorBox.style.display = "block";
+        retry.style.display = "inline-block";
+
+        $("systemBadge").textContent = "AGENT OFFLINE";
+        $("sessionStatus").textContent = "FAILED";
+        $("uiStatus").textContent = "AGENT FAILED";
+
+        log("Agent initialization failed: " + error.message, "error");
+    }
+}
+
+$("retryBoot").addEventListener("click", bootRune);
+
+// Do not claim readiness until the local module initializes.
+bootRune();
+</script>
+</body>
+</html>
