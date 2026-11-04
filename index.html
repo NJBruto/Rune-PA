@@ -551,6 +551,327 @@ button { font: inherit; }
     }
 }
 
+/* RUNE V5: local chat mode */
+
+.chat-panel {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chat-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.chat-engine {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--muted);
+}
+
+.chat-engine.green { color: var(--green); }
+.chat-engine.yellow { color: #ffd36b; }
+.chat-engine.red { color: #ff6478; }
+
+.chat-settings {
+    border: 1px solid rgba(0, 190, 255, .16);
+    background: rgba(1, 14, 22, .55);
+    padding: 0 11px;
+}
+
+.chat-settings summary {
+    cursor: pointer;
+    padding: 10px 0;
+    color: #8eefff;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    list-style: none;
+}
+
+.chat-settings summary::-webkit-details-marker { display: none; }
+
+.chat-settings summary::before {
+    content: "+ ";
+    color: var(--cyan);
+}
+
+.chat-settings[open] summary::before { content: "− "; }
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    padding: 4px 0 12px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    font-size: 9px;
+    letter-spacing: .5px;
+    color: var(--muted);
+}
+
+.field.wide { grid-column: span 2; }
+
+.field input,
+.field select,
+.field textarea {
+    width: 100%;
+    border: 1px solid rgba(0, 190, 255, .22);
+    background: #04121b;
+    color: #b9eaf5;
+    padding: 8px;
+    font: inherit;
+    font-size: 10px;
+    outline: none;
+}
+
+.field textarea {
+    resize: vertical;
+    min-height: 42px;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 1px rgba(0, 234, 255, .12);
+}
+
+.field input:disabled,
+.field select:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.check {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 30px;
+    font-size: 9px;
+    color: var(--muted);
+}
+
+.check input { accent-color: #00eaff; }
+
+.settings-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 0 0 12px;
+}
+
+.settings-note {
+    font-size: 9px;
+    line-height: 1.6;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.settings-note.green { color: var(--green); }
+.settings-note.yellow { color: #ffd36b; }
+.settings-note.red { color: #ff6478; }
+
+.chat-log {
+    min-height: 170px;
+    max-height: 380px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 4px;
+    border-top: 1px solid rgba(0, 180, 255, .1);
+    border-bottom: 1px solid rgba(0, 180, 255, .1);
+    scrollbar-width: thin;
+    scrollbar-color: #15536a #031019;
+}
+
+.msg {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-width: min(92%, 900px);
+}
+
+.msg.user {
+    align-self: flex-end;
+    align-items: flex-end;
+}
+
+.msg.assistant { align-self: flex-start; }
+
+.msg.system {
+    align-self: center;
+    max-width: 100%;
+}
+
+.msg-label {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+}
+
+.msg-body {
+    font-size: 11px;
+    line-height: 1.75;
+    color: #b9eaf5;
+    background: rgba(0, 80, 120, .08);
+    border: 1px solid rgba(0, 190, 255, .2);
+    padding: 9px 11px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.msg.user .msg-body {
+    color: #d4fbff;
+    background: rgba(0, 120, 200, .1);
+    border-color: rgba(0, 200, 255, .35);
+}
+
+.msg.assistant .msg-body {
+    color: #c8f7dc;
+    background: rgba(0, 255, 120, .035);
+    border-color: rgba(0, 255, 120, .22);
+}
+
+.msg.system .msg-body {
+    color: #ffd36b;
+    background: rgba(255, 211, 107, .035);
+    border-style: dashed;
+    border-color: rgba(255, 211, 107, .28);
+    font-size: 9px;
+}
+
+.msg-body.streaming::after {
+    content: "▊";
+    margin-left: 2px;
+    color: var(--cyan);
+    animation: cursorBlink 1s steps(1) infinite;
+}
+
+@keyframes cursorBlink {
+    50% { opacity: 0; }
+}
+
+.msg-body pre.code {
+    margin: 8px 0;
+    padding: 9px;
+    overflow: auto;
+    background: #031019;
+    border: 1px solid rgba(0, 190, 255, .18);
+    white-space: pre;
+}
+
+.msg-body code {
+    font-family: inherit;
+    background: rgba(0, 190, 255, .1);
+    padding: 1px 4px;
+}
+
+.msg-body pre.code code {
+    background: none;
+    padding: 0;
+}
+
+.msg-body a { color: var(--cyan); }
+.msg-body strong { color: #e2fdff; }
+
+.msg-body .md-h2,
+.msg-body .md-h3 {
+    display: block;
+    color: #8eefff;
+    margin-top: 6px;
+}
+
+.chat-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.chat-form textarea {
+    flex: 1;
+    min-height: 46px;
+    max-height: 160px;
+    resize: none;
+    border: 1px solid rgba(0, 190, 255, .25);
+    background: #04121b;
+    color: #d4fbff;
+    padding: 10px 11px;
+    font: inherit;
+    font-size: 11px;
+    line-height: 1.6;
+    outline: none;
+}
+
+.chat-form textarea:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 1px rgba(0, 234, 255, .12);
+}
+
+.chat-form textarea::placeholder { color: #315d6e; }
+
+.chat-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.chat-actions .btn { min-width: 82px; }
+
+.btn.active {
+    background: rgba(0, 255, 120, .12);
+    border-color: rgba(0, 255, 120, .55);
+    color: var(--green);
+}
+
+.btn[hidden] { display: none; }
+
+.chat-hint {
+    font-size: 9px;
+    line-height: 1.7;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 850px) {
+    .settings-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .field.wide { grid-column: span 2; }
+}
+
+@media (max-width: 480px) {
+    .settings-grid { grid-template-columns: 1fr; }
+    .field.wide { grid-column: span 1; }
+
+    .chat-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .chat-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .chat-actions .btn {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
 /* RUNE V4: agent initialization overlay */
 #bootScreen {
     position: fixed;
@@ -783,6 +1104,9 @@ button { font: inherit; }
             <button class="btn" id="wakeButton">
                 PLAY WAKE SOUND
             </button>
+            <button class="btn" id="openChat">
+                CHAT MODE
+            </button>
         </div>
 
         <div style="width: min(100%, 340px); margin-top: 20px;">
@@ -824,12 +1148,12 @@ button { font: inherit; }
 
             <div class="stat-row">
                 <span class="small-muted">AI engine</span>
-                <span class="stat-value yellow">NOT CONNECTED</span>
+                <span class="stat-value yellow" id="aiStatus">NOT CONNECTED</span>
             </div>
 
             <div class="stat-row">
-                <span class="small-muted">Command engine</span>
-                <span class="stat-value yellow">NOT IMPLEMENTED</span>
+                <span class="small-muted">Chat mode</span>
+                <span class="stat-value yellow" id="chatStatus">LOCAL / OPTIONAL</span>
             </div>
         </section>
 
@@ -863,6 +1187,139 @@ button { font: inherit; }
         </section>
 
     </aside>
+
+    <!-- FULL WIDTH: LOCAL CHAT MODE -->
+    <section class="panel chat-panel" id="chatPanel">
+        <div class="panel-title chat-title">
+            <span>07 // CHAT MODE</span>
+            <span class="chat-engine" id="chatEngineStatus">
+                AI ENGINE: NOT CONNECTED
+            </span>
+        </div>
+
+        <details class="chat-settings" id="chatSettings">
+            <summary>CONFIG / LOCAL AI</summary>
+
+            <div class="settings-grid">
+                <label class="field">
+                    <span>Provider</span>
+                    <select id="chatProvider">
+                        <option value="openai">
+                            OpenAI-compatible (LM Studio, llama.cpp, Jan, vLLM)
+                        </option>
+                        <option value="ollama">Ollama</option>
+                        <option value="browser">Chrome built-in AI (Gemini Nano)</option>
+                        <option value="webllm">WebLLM (in-browser, WebGPU)</option>
+                        <option value="demo">Demo (offline test)</option>
+                        <option value="ws">WebSocket agent (custom)</option>
+                    </select>
+                </label>
+
+                <label class="field">
+                    <span>Endpoint / base URL</span>
+                    <input
+                        id="chatEndpoint"
+                        type="text"
+                        spellcheck="false"
+                        autocomplete="off"
+                        placeholder="http://localhost:1234/v1"
+                    >
+                </label>
+
+                <label class="field">
+                    <span>Model</span>
+                    <input
+                        id="chatModel"
+                        type="text"
+                        spellcheck="false"
+                        autocomplete="off"
+                        list="chatModelList"
+                        placeholder="model name"
+                    >
+                    <datalist id="chatModelList"></datalist>
+                </label>
+
+                <label class="field">
+                    <span>API key (optional)</span>
+                    <input
+                        id="chatApiKey"
+                        type="password"
+                        autocomplete="off"
+                        placeholder="not needed for most local servers"
+                    >
+                </label>
+
+                <label class="field wide">
+                    <span>System prompt</span>
+                    <textarea id="chatSystemPrompt" rows="2"></textarea>
+                </label>
+
+                <label class="field">
+                    <span>Temperature</span>
+                    <input
+                        id="chatTemperature"
+                        type="number"
+                        min="0"
+                        max="2"
+                        step="0.1"
+                        value="0.7"
+                    >
+                </label>
+
+                <label class="field">
+                    <span>Max tokens</span>
+                    <input
+                        id="chatMaxTokens"
+                        type="number"
+                        min="32"
+                        max="8192"
+                        step="32"
+                        value="512"
+                    >
+                </label>
+
+                <label class="check">
+                    <input id="chatStream" type="checkbox" checked>
+                    Stream tokens
+                </label>
+
+                <label class="check">
+                    <input id="chatSpeak" type="checkbox">
+                    Speak replies
+                </label>
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn secondary" id="chatDetect" type="button">
+                    DETECT LOCAL AI
+                </button>
+                <button class="btn" id="chatTest" type="button">TEST</button>
+                <button class="btn" id="chatSave" type="button">SAVE</button>
+                <span class="settings-note" id="chatSettingsNote"></span>
+            </div>
+        </details>
+
+        <div class="chat-log" id="chatLog" aria-live="polite"></div>
+
+        <form class="chat-form" id="chatForm">
+            <textarea
+                id="chatInput"
+                rows="2"
+                placeholder="Ask Rune anything... (Enter to send, Shift+Enter for a new line)"
+            ></textarea>
+
+            <div class="chat-actions">
+                <button class="btn secondary" id="chatSend" type="submit">SEND</button>
+                <button class="btn" id="chatStop" type="button" hidden>STOP</button>
+                <button class="btn" id="chatDictate" type="button">DICTATE</button>
+                <button class="btn" id="chatClear" type="button">CLEAR</button>
+            </div>
+        </form>
+
+        <div class="chat-hint" id="chatHint">
+            Local only. Nothing leaves this machine unless you point the endpoint elsewhere.
+        </div>
+    </section>
 </main>
 
 <footer class="footer">
@@ -1474,12 +1931,45 @@ async function bootRune() {
         // Initialize the existing V3 interface and console.
         initializeInterface();
 
+        // Stage 4: load the local chat engine. A chat failure must not
+        // prevent the rest of the interface from starting.
+        let chatReady = false;
+
+        try {
+            setBootProgress(86, "Loading local chat module");
+            const chatModule = await import("./rune-chat.js");
+
+            chatModule.initializeChat({
+                log,
+                setCoreStatus
+            });
+
+            chatReady = true;
+            log("Local chat module loaded.", "ok");
+        } catch (chatError) {
+            console.error(chatError);
+            log(
+                "Chat module failed to load: " + chatError.message,
+                "error"
+            );
+        }
+
         $("uiStatus").textContent = "UI READY";
-        $("sessionStatus").textContent = "LOCAL MODULE LOADED";
-        $("systemBadge").textContent = "AI NOT CONNECTED";
+        $("sessionStatus").textContent =
+            chatReady ? "CHAT MODULE LOADED" : "LOCAL MODULE LOADED";
+
+        if (!chatReady) {
+            $("systemBadge").textContent = "AI NOT CONNECTED";
+            $("chatStatus").textContent = "UNAVAILABLE";
+            $("chatStatus").className = "stat-value red";
+        }
 
         log("Local module initialization completed.", "ok");
-        log("AI engine is not connected.", "warn");
+
+        if (!chatReady) {
+            log("AI engine is not connected.", "warn");
+        }
+
         log("Agent version: " + agent.version, "ok");
         log(
             "Audio API: " +
@@ -1490,6 +1980,16 @@ async function bootRune() {
             "Microphone API: " +
             (agent.checks.microphone ? "available" : "unavailable"),
             agent.checks.microphone ? "ok" : "warn"
+        );
+        log(
+            "Speech recognition: " +
+            (agent.checks.speechRecognition ? "available" : "unavailable"),
+            agent.checks.speechRecognition ? "ok" : "warn"
+        );
+        log(
+            "Browser AI (Prompt API): " +
+            (agent.checks.browserAI ? "available" : "unavailable"),
+            agent.checks.browserAI ? "ok" : "warn"
         );
 
         setBootProgress(100, "Local module initialized");
@@ -1505,10 +2005,9 @@ async function bootRune() {
         $("greetingText").innerHTML =
             'Hey there, How can I help you today?';
 
-        setCoreStatus(
-            "INTERFACE READY",
-            "AI engine not connected"
-        );
+        if (!chatReady) {
+            setCoreStatus("INTERFACE READY", "AI engine not connected");
+        }
 
         log("Rune interface is ready for interaction.", "ok");
 
