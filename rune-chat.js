@@ -1861,7 +1861,7 @@ export function initializeChat(hookOptions = {}) {
         }, 900);
     }
 
-    log("Chat module initialized. Providers: OpenAI-compatible, Ollama, Chrome AI, WebSocket, Demo.", "ok");
+    log("Chat module initialized. Providers: OpenAI-compatible, Ollama, Chrome AI, WebLLM, WebSocket, Demo.", "ok");
 
     globalThis.RUNE_CHAT = {
         config: () => ({ ...config }),

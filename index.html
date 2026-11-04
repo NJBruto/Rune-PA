@@ -958,10 +958,110 @@ button { font: inherit; }
         transition-duration: .01ms;
     }
 }
+
+/* RUNE V5: background load console (bottom-left, above boot screen) */
+
+#bgConsole {
+    position: fixed;
+    left: 12px;
+    bottom: 12px;
+    z-index: 1200;
+    width: min(380px, calc(100vw - 24px));
+    max-height: 34vh;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(0, 200, 255, .28);
+    background: rgba(2, 10, 15, .92);
+    box-shadow: 0 0 24px rgba(0, 180, 255, .12);
+    backdrop-filter: blur(6px);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 9px;
+    line-height: 1.7;
+    color: #8fd7e6;
+}
+
+#bgConsole.collapsed .bg-console-body { display: none; }
+
+.bg-console-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 8px;
+    border-bottom: 1px solid rgba(0, 200, 255, .16);
+    color: #00eaff;
+    letter-spacing: 1.5px;
+    font-size: 8px;
+    text-transform: uppercase;
+    user-select: none;
+}
+
+.bg-console-head .bg-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    margin-right: 6px;
+}
+
+.bg-console-head .bg-left {
+    display: flex;
+    align-items: center;
+}
+
+#bgConsoleToggle {
+    background: transparent;
+    border: 1px solid rgba(0, 200, 255, .3);
+    color: #8eefff;
+    font: inherit;
+    font-size: 8px;
+    line-height: 1;
+    padding: 2px 6px;
+    cursor: pointer;
+}
+
+#bgConsoleToggle:hover { border-color: #00eaff; color: #d4fbff; }
+
+.bg-console-body {
+    overflow: auto;
+    overflow-wrap: anywhere;
+    padding: 4px 8px 6px;
+    scrollbar-width: thin;
+    scrollbar-color: #15536a #031019;
+}
+
+.bg-console-body .log-line { white-space: pre-wrap; }
+.bg-console-body .time { color: #315d6e; }
+.bg-console-body .ok { color: var(--green); }
+.bg-console-body .warn { color: #ffd36b; }
+.bg-console-body .event { color: var(--cyan); }
+.bg-console-body .error { color: #ff6478; }
+
+@media (max-width: 480px) {
+    #bgConsole {
+        left: 8px;
+        bottom: 8px;
+        width: calc(100vw - 16px);
+        max-height: 28vh;
+    }
+}
 </style>
 </head>
 
 <body>
+
+<aside id="bgConsole" aria-live="polite" aria-label="Background load console">
+    <div class="bg-console-head">
+        <span class="bg-left">
+            <span class="bg-dot"></span>BACKGROUND LOG
+        </span>
+        <button id="bgConsoleToggle" type="button" title="Collapse or expand">
+            HIDE
+        </button>
+    </div>
+    <div class="bg-console-body" id="bgConsoleBody"></div>
+</aside>
 
 <div id="bootScreen" role="status" aria-live="polite">
     <div class="bootContent">
@@ -1369,7 +1469,7 @@ function timestamp() {
     });
 }
 
-function log(message, type = "event") {
+function makeLogLine(message, type) {
     const line = document.createElement("div");
     line.className = "log-line";
 
@@ -1382,20 +1482,50 @@ function log(message, type = "event") {
     content.textContent = message;
 
     line.append(time, content);
-    $("console").appendChild(line);
+    return line;
+}
 
-    // Keep the newest 70 real event entries.
-    while ($("console").children.length > 70) {
-        $("console").firstElementChild.remove();
+function appendLogLine(container, line, maxLines) {
+    if (!container) return;
+
+    container.appendChild(line);
+
+    // Keep the newest entries only.
+    while (container.children.length > maxLines) {
+        container.firstElementChild.remove();
     }
 
-    $("console").scrollTop = $("console").scrollHeight;
+    container.scrollTop = container.scrollHeight;
+}
+
+function log(message, type = "event") {
+    const line = makeLogLine(message, type);
+
+    // Main console panel (05 // SYSTEM CONSOLE).
+    appendLogLine($("console"), line, 70);
+
+    // Always-visible background console at the bottom-left. It mirrors
+    // boot and load events even while the boot overlay is covering the UI.
+    const bg = $("bgConsoleBody");
+
+    if (bg) {
+        appendLogLine(bg, line.cloneNode(true), 200);
+    }
 }
 
 function setCoreStatus(main, detail) {
     $("coreStatus").childNodes[0].textContent = main;
     $("coreSubstatus").textContent = detail;
 }
+
+/* Background console toggle. Kept outside the boot path so it works
+   even if initialization fails. */
+
+$("bgConsoleToggle").addEventListener("click", () => {
+    const panel = $("bgConsole");
+    const collapsed = panel.classList.toggle("collapsed");
+    $("bgConsoleToggle").textContent = collapsed ? "SHOW" : "HIDE";
+});
 
 function setSoundStatus(message) {
     $("soundStatus").textContent = message;
@@ -1496,7 +1626,12 @@ async function tryWakeSound(isStartup = false) {
         }
 
         if (audioContext.state !== "running") {
-            await audioContext.resume();
+            // Browsers can leave resume() pending forever when autoplay is
+            // blocked. Never let the startup sequence wait on that promise.
+            await Promise.race([
+                audioContext.resume().catch(() => {}),
+                new Promise(resolve => setTimeout(resolve, 700))
+            ]);
         }
 
         if (audioContext.state !== "running") {
@@ -1880,6 +2015,22 @@ window.addEventListener("pagehide", () => {
 const bootSleep = ms =>
     new Promise(resolve => setTimeout(resolve, ms));
 
+function withTimeout(promise, ms, label) {
+    return Promise.race([
+        Promise.resolve(promise).catch(error => {
+            console.warn(label + " failed:", error);
+            return null;
+        }),
+        new Promise(resolve => {
+            setTimeout(() => {
+                console.warn(label + " timed out after " + ms + "ms");
+                log(label + " timed out; continuing startup.", "warn");
+                resolve(null);
+            }, ms);
+        })
+    ]);
+}
+
 function setBootProgress(percent, detail) {
     $("bootDetail").textContent = detail;
 }
@@ -1903,16 +2054,31 @@ async function bootRune() {
 
     log("Rune startup sequence started.", "event");
 
+    // Safety net: never leave the boot overlay covering the app forever.
+    const bootWatchdog = setTimeout(() => {
+        if (!screen.classList.contains("bootDone")) {
+            log(
+                "Boot watchdog: startup exceeded 20s; revealing interface.",
+                "warn"
+            );
+            $("bootLabel").textContent = "STARTUP TIMED OUT";
+            screen.classList.add("bootDone");
+        }
+    }, 20000);
+
     try {
         // Stage 1: begin the visible loading transition.
+        log("Boot 1/5: checking browser environment.", "event");
         setBootProgress(12, "Checking browser environment");
         await bootSleep(250);
 
         // Stage 2: dynamically load agent.js from this same server.
+        log("Boot 2/5: importing ./agent.js ...", "event");
         setBootProgress(32, "Loading local agent module");
         const module = await import("./agent.js");
 
         log("Local agent module downloaded by browser.", "ok");
+        log("Boot 3/5: running agent.initializeAgent().", "event");
         setBootProgress(58, "Initializing agent");
         await bootSleep(250);
 
@@ -1936,6 +2102,7 @@ async function bootRune() {
         let chatReady = false;
 
         try {
+            log("Boot 4/5: importing ./rune-chat.js ...", "event");
             setBootProgress(86, "Loading local chat module");
             const chatModule = await import("./rune-chat.js");
 
@@ -1992,14 +2159,17 @@ async function bootRune() {
             agent.checks.browserAI ? "ok" : "warn"
         );
 
+        log("Boot 5/5: finalizing interface.", "event");
         setBootProgress(100, "Local module initialized");
         await bootSleep(400);
 
         $("bootLabel").textContent = "LOCAL MODULE INITIALIZED";
 
-        // Try the real wake sound. The browser may block autoplay.
-        await tryWakeSound(true);
+        // Try the real wake sound. The browser may block autoplay, so cap
+        // the wait. The boot screen must never depend on audio permission.
+        await withTimeout(tryWakeSound(true), 1500, "Wake sound");
 
+        clearTimeout(bootWatchdog);
         screen.classList.add("bootDone");
 
         $("greetingText").innerHTML =
@@ -2021,6 +2191,7 @@ async function bootRune() {
 
     } catch (error) {
         console.error(error);
+        clearTimeout(bootWatchdog);
 
         $("bootLabel").textContent = "INITIALIZATION FAILED";
         $("bootDetail").textContent =
