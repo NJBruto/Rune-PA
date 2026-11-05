@@ -1,247 +1,211 @@
 # Rune PA
 
-Rune is a local-first, browser-based personal assistant prototype with a
-JARVIS-style HUD. The interface, microphone meter, wake sound, and chat client
-all run in the browser. There is no Rune backend, account, telemetry, or cloud
-service.
+Rune is a local-first, JARVIS-style personal assistant. The HUD, microphone
+meter, wake sound, boot sequence, and chat client run in the browser; a small
+Node/Express server serves the app and proxies requests to local AI servers so
+the browser never hits CORS restrictions.
 
-The new chat mode can talk to a local AI running on your computer:
+There is no account, telemetry, or cloud service. Nothing leaves your machine
+unless you explicitly configure a provider that points somewhere else.
 
-- **Ollama**
-- **LM Studio**
-- **llama.cpp server**
-- **Jan**
-- **vLLM**
-- **KoboldCpp**
-- **LocalAI**
-- **text-generation-webui**
-- **Chrome's built-in AI / Gemini Nano** (Prompt API)
-- **Any custom WebSocket agent**
-- **Demo mode** — no model or server required
+## Architecture
+
+```
+React + Vite (browser)
+  ├─ HUD, reactor, microphone meter, wake sound
+  ├─ chat UI and conversation state
+  ├─ Chrome built-in AI · WebLLM · WebSocket agent · Demo
+  └─ fetch /api/*  ─────────────┐
+                                │
+Node + Express (server/index.js)
+  ├─ serves the production build from dist/
+  ├─ GET  /api/health
+  ├─ GET  /api/detect     scans common local AI ports
+  ├─ GET  /api/models     lists models from a provider
+  └─ POST /api/chat       streams SSE to the browser
+        ├─ Ollama        → /api/chat
+        └─ OpenAI-compat → /v1/chat/completions
+```
+
+The backend proxies only `http://` and `https://` endpoints on localhost by
+default. Set `RUNE_ALLOW_REMOTE=1` to allow other hosts.
+
+## Requirements
+
+- Node.js `^20.19.0` or `>=22.12.0` (required by Vite 8)
+- npm 10+
+- A modern browser (Chrome, Edge, or Firefox) for the HUD and chat
+- Optional: a local AI server such as Ollama or LM Studio
 
 ## Quick start
 
-`agent.js` and `rune-chat.js` are ES modules, so Rune must be served over HTTP.
-Opening `index.html` directly from `file://` will not work.
-
 ```bash
-./serve.sh
-# or
-python3 -m http.server 8000 --bind 127.0.0.1
+npm install
+npm run dev
 ```
 
-Then open <http://127.0.0.1:8000>.
+`npm run dev` starts both processes:
+
+- Vite dev server: <http://127.0.0.1:5173>
+- Node API server: <http://127.0.0.1:8787>
+
+Vite proxies `/api` to the Node server, so open the Vite URL during
+development.
+
+### Production build
+
+```bash
+npm run build
+npm start
+```
+
+Then open <http://127.0.0.1:8787>. The Node server serves `dist/` and falls back
+to `dist/index.html` for client-side routes.
+
+### Scripts
+
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | Runs the API server and Vite together |
+| `npm run dev:client` | Vite only |
+| `npm run dev:server` | Node API only, with `--watch` |
+| `npm run build` | Builds the React app into `dist/` |
+| `npm start` | Serves the built app and API |
+| `npm run preview` | Vite preview of the build |
+
+## Using the chat
 
 1. Open **07 // CHAT MODE**.
 2. Expand **CONFIG / LOCAL AI**.
 3. Pick a provider, or press **DETECT LOCAL AI**.
 4. Press **TEST**, then send a message.
-5. Use **Demo** if you only want to test the chat interface.
+5. Use **Demo** to test the interface with no model or server.
 
-## Provider setup
+On first load Rune scans the common local ports automatically. If it finds a
+server it fills in the provider, endpoint, and first available model.
+
+## Providers
 
 | Provider | Endpoint | Example model | Notes |
 | --- | --- | --- | --- |
-| Ollama | `http://localhost:11434` | `llama3.2` | Native `/api/chat` streaming |
-| LM Studio | `http://localhost:1234/v1` | model shown in LM Studio | Enable the local server and CORS |
+| Ollama | `http://localhost:11434` | `qwen3:1.7b` | Native `/api/chat`, proxied by Node |
+| LM Studio | `http://localhost:1234/v1` | model shown in LM Studio | Start the local server |
 | llama.cpp | `http://localhost:8080/v1` | whatever the server loads | `llama-server -m model.gguf` |
-| Jan | `http://localhost:1337/v1` | model shown in Jan | OpenAI-compatible server |
+| Jan | `http://localhost:1337/v1` | model shown in Jan | OpenAI-compatible |
 | vLLM | `http://localhost:8000/v1` | served model name | OpenAI-compatible |
 | KoboldCpp | `http://localhost:5001/v1` | served model name | Enable the API |
 | LocalAI | `http://localhost:8080/v1` | served model name | OpenAI-compatible |
 | text-generation-webui | `http://localhost:5000/v1` | served model name | OpenAI-compatible extension |
 | Chrome AI | *(no endpoint)* | `gemini-nano` | Chrome 138+, Prompt API |
-| WebLLM | *(no endpoint)* | `Llama-3.2-1B-Instruct-q4f32_1-MLC` | Runs in the browser via WebGPU |
+| WebLLM | *(no endpoint)* | `Llama-3.2-1B-Instruct-q4f32_1-MLC` | Runs in the tab via WebGPU |
 | WebSocket | `ws://localhost:8765` | optional | Custom agent protocol |
 | Demo | *(no endpoint)* | `rune-demo` | Works offline |
 
-For OpenAI-compatible providers, the base URL normally ends in `/v1`. Rune
-also accepts a bare host such as `http://localhost:1234` and adds `/v1`.
+For OpenAI-compatible providers the base URL normally ends in `/v1`. Rune also
+accepts a bare host such as `http://localhost:1234` and adds `/v1`.
 
-### Ollama
+### Qwen3 1.7B with Ollama
+
+`qwen3:1.7b` is a good fit for this local test: it is small (about 1.4 GB), runs
+on modest hardware, and is aimed at chat/assistant workloads.
 
 ```bash
 ollama serve
-ollama pull llama3.2
+ollama pull qwen3:1.7b
 ```
 
-If the browser is blocked by CORS, restart Ollama with an allowed origin:
+Then choose **Ollama**, endpoint `http://localhost:11434`, model `qwen3:1.7b`.
 
-```bash
-OLLAMA_ORIGINS=* ollama serve
-```
-
-For a narrower setting, use the exact page origin, for example
-`OLLAMA_ORIGINS=http://127.0.0.1:8000`.
+Qwen3 has a "thinking" mode that produces a long reasoning block before the
+answer. It is off by default in Rune; enable **Qwen thinking mode** only when
+you want deeper reasoning, and leave it off for snappy replies.
 
 ### LM Studio
 
 1. Open LM Studio → Developer.
 2. Start the local server.
-3. Enable CORS in the server settings.
-4. Use `http://localhost:1234/v1` in Rune.
+3. Load a model and copy its name into Rune.
+4. Endpoint: `http://localhost:1234/v1`.
 
-### llama.cpp
+### Chrome built-in AI
 
-```bash
-llama-server -m model.gguf --host 127.0.0.1 --port 8080
-```
+Requires Chrome 138+ on supported hardware with the Prompt API enabled. The
+model may download on first use. Check `chrome://on-device-internals` if it is
+unavailable.
 
-Use `http://localhost:8080/v1`.
+### WebLLM
 
-### Chrome built-in AI (Gemini Nano)
+Requires WebGPU (Chrome or Edge). The first message downloads and caches the
+model weights in the browser.
 
-Choose **Chrome built-in AI**. This uses the Prompt API, not a local HTTP
-server. It requires a supported Chrome version and hardware; the model may
-download on first use. Check availability at `chrome://on-device-internals`.
-Firefox and Safari do not currently provide this API.
+### WebSocket agent
 
-### WebLLM (in-browser)
-
-Choose **WebLLM (in-browser)** to run a model inside the tab with WebGPU. The
-first message downloads and caches the model weights from the WebLLM CDN/model
-host; later runs reuse the browser cache. This is the easiest way to test chat
-without installing Ollama, but it needs a WebGPU-capable browser and enough
-memory/VRAM.
-
-The model field accepts any WebLLM model ID, for example
-`Llama-3.2-1B-Instruct-q4f32_1-MLC` or
-`Qwen2.5-1.5B-Instruct-q4f32_1-MLC`. Larger models need more GPU memory.
-WebLLM is loaded on demand from `https://esm.run/@mlc-ai/web-llm`; it is not
-used unless you select this provider.
-
-### WebSocket agent protocol
-
-Rune sends one JSON message after the socket opens:
+Rune sends:
 
 ```json
-{
-  "type": "chat",
-  "messages": [
-    { "role": "system", "content": "..." },
-    { "role": "user", "content": "Hello" }
-  ],
-  "model": "optional-model-name",
-  "stream": true
-}
+{ "type": "chat", "messages": [], "model": "...", "stream": true }
 ```
 
-The agent can reply with any of these JSON shapes:
+The agent may stream `{ "delta": "..." }`, `{ "token": "..." }`,
+`{ "content": "..." }`, or plain text chunks, then send `{ "type": "done" }`.
+Send `{ "type": "error", "error": "..." }` on failure.
 
-```json
-{ "delta": "partial text" }
-{ "token": "partial text" }
-{ "content": "partial text" }
-{ "message": { "content": "partial text" } }
+## Security and privacy
+
+- The Node server binds to `127.0.0.1` by default.
+- Proxy targets are restricted to localhost unless `RUNE_ALLOW_REMOTE=1` is set.
+- `RUNE_ALLOW_REMOTE=1` lets the server reach remote endpoints; only use it when
+  you trust the network and the endpoint.
+- API keys are kept in `localStorage` and sent only to the configured endpoint.
+- No analytics, tracking, or remote logging is included.
+
+Environment variables:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PORT` | `8787` | API/static server port |
+| `HOST` | `127.0.0.1` | Bind address |
+| `RUNE_ALLOW_REMOTE` | unset | `1` allows non-local proxy targets |
+
+## Project layout
+
 ```
-
-Finish with `{ "type": "done" }` or `{ "done": true }`. Plain text messages are
-also accepted as chunks.
-
-## What changed
-
-- Added a full chat panel with streaming replies, stop, clear, and Markdown
-  rendering.
-- Added provider adapters for OpenAI-compatible servers, Ollama, Chrome's
-  Prompt API, WebLLM (WebGPU), WebSocket agents, and an offline demo.
-- Added automatic detection of common local AI ports and model discovery.
-- Added a connection tester with useful CORS/model errors.
-- Added browser speech recognition (dictation) and speech synthesis (optional
-  spoken replies).
-- Persisted provider settings in `localStorage`; conversation history stays in
-  memory and is cleared on reload.
-- Updated `agent.js` to report speech, streaming, and browser-AI capabilities.
-- Kept the existing microphone meter and wake sound intact.
-
-## Files
-
-| File | Purpose |
-| --- | --- |
-| `index.html` | HUD, layout, styles, microphone meter, boot sequence |
-| `agent.js` | Capability checks and Rune version |
-| `rune-chat.js` | Chat UI, provider adapters, detection, streaming, speech |
-| `serve.sh` | Local static server helper |
-| `fix_rune_v41.py` | Historical V4.1 boot-screen patch (not used at runtime) |
-
-## Research notes: how people build local JARVIS-style assistants
-
-The common pattern in current open-source JARVIS projects is not one giant
-model. It is a small local stack:
-
-1. **Speech-to-text** — Whisper, Parakeet, or the browser's SpeechRecognition.
-2. **A local LLM** — Ollama, LM Studio, llama.cpp, or a browser model such as
-   Gemini Nano / WebLLM.
-3. **Streaming** — Server-Sent Events or WebSockets so words appear as they are
-   generated instead of waiting for the whole answer.
-4. **Text-to-speech** — Piper, Chatterbox, system voices, or the browser's
-   speechSynthesis.
-5. **Memory and tools** — a local database, knowledge graph, MCP servers, or
-   simple function calls for files, apps, weather, and search.
-6. **A wake word / VAD layer** — Porcupine, Silero VAD, or a simple amplitude
-   gate.
-
-Examples and references:
-
-- [Jarvis — Local AI Voice Assistant](https://www.everydev.ai/tools/jarvis-ai-voice-assistant):
-  Ollama inference, unlimited local memory, MCP tools, Whisper dictation,
-  Piper TTS.
-- [akshayaggarwal99/jarvis-ai-assistant](https://github.com/akshayaggarwal99/jarvis-ai-assistant):
-  local Whisper/Parakeet transcription and Ollama models for AI post-processing.
-- [JARVIS_AI](https://github.com/Konstantinos123456789/JARVIS_AI): knowledge
-  graph memory, BERT intent/emotion detection, and computer vision.
-- [Chrome Prompt API](https://developer.chrome.com/docs/ai/prompt-api): built-in
-  Gemini Nano sessions, streaming, and initial prompts.
-- [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md): native
-  `/api/chat` streaming and OpenAI-compatible endpoints.
-- [LM Studio local server](https://lmstudio.ai/docs/app/api): OpenAI-compatible
-  local endpoints.
-
-Rune follows the same shape but stays browser-first: the page is the UI and
-orchestrator, and all model inference happens in a local process or in the
-browser's built-in model.
-
-## Privacy and security
-
-- Rune sends requests only to the endpoint you configure. WebLLM is the one
-  exception: selecting it loads the WebLLM runtime and model weights from their
-  public hosts, then runs inference locally in the tab.
-- The API key field is optional and is stored in `localStorage` on this origin.
-  Do not use a valuable cloud key in a shared browser profile.
-- Local AI servers often have no authentication. Keep them bound to
-  `127.0.0.1`; do not expose them to your LAN or the internet.
-- `OLLAMA_ORIGINS=*` is convenient for testing but allows any web origin to call
-  your Ollama instance. Prefer the exact Rune origin when possible.
-- Chat history is not persisted by Rune. Reloading the page clears it.
+.
+├── index.html              Vite entry shell
+├── vite.config.js          React plugin + /api dev proxy
+├── package.json
+├── server/
+│   └── index.js            Express static server + AI proxy
+└── src/
+    ├── main.jsx            React entry
+    ├── App.jsx             boot sequence, status wiring, layout
+    ├── styles.css          HUD, reactor, panels, chat styles
+    ├── components/         BootScreen, BackgroundConsole, TopBar,
+    │                       Reactor, Panels, ChatPanel, LogLine
+    ├── hooks/              useLogs, useAudio, useChat
+    └── lib/                chatConfig, providers, markdown, agent
+```
 
 ## Troubleshooting
 
-**"Could not reach ..." / "Failed to fetch"**
+**The boot screen never clears.** It has a 20-second watchdog that reveals the
+interface anyway. Check the browser console and the background log.
 
-The server is not running, the URL is wrong, or CORS is blocking the browser.
-Start the server and allow Rune's origin. For Ollama use
-`OLLAMA_ORIGINS=* ollama serve`; for LM Studio enable CORS in the server
-settings.
+**No local AI found.** Start Ollama (`ollama serve`) or an OpenAI-compatible
+server, then press **DETECT LOCAL AI**. Demo mode always works.
 
-**HTTP 404**
+**Ollama says the model is missing.** Run `ollama pull <model>`; the error
+message includes the exact command.
 
-For an OpenAI-compatible server, check that the base URL ends in `/v1`. For
-Ollama, choose the **Ollama** provider instead of **OpenAI-compatible**.
+**Chat hangs or the connection closes.** Confirm the Node server is running and
+check its terminal output. In development, Vite proxies `/api` to port 8787.
 
-**Model not found**
+**Microphone does not start.** Browsers require a secure context
+(`localhost` or HTTPS) and explicit permission. The HUD still works without it.
 
-Pull or load the model first. For Ollama:
+**Wake sound is silent.** Browsers block autoplay until a user gesture. Click
+the page once; Rune plays the sound after the first interaction.
 
-```bash
-ollama pull llama3.2
-```
+## License
 
-**Chrome built-in AI is unavailable**
-
-Check `chrome://on-device-internals`, Chrome version, free disk space, and the
-Prompt API hardware requirements. The model may still need to download.
-
-**Speech recognition does not work**
-
-Dictation uses the Web Speech API. Chrome and Edge generally support it;
-Firefox support varies. Spoken replies use `speechSynthesis` and depend on the
-voices installed on your system.
+Prototype project. Add a license before distributing.

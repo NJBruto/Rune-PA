@@ -1,7 +1,7 @@
+/* Browser capability probe. Runs entirely in the browser. */
+
 export async function initializeAgent() {
-    // Verify that the browser supports the APIs Rune needs.
     const checks = {
-        browser: true,
         audio: Boolean(
             window.AudioContext || window.webkitAudioContext
         ),
@@ -18,12 +18,13 @@ export async function initializeAgent() {
         ),
         browserAI: Boolean(
             window.LanguageModel || window.ai?.languageModel
-        )
+        ),
+        webgpu: Boolean(navigator.gpu)
     };
 
     return {
         name: "Rune",
-        version: "0.5.0",
+        version: "0.6.0",
         initialized: true,
         checks,
         initializedAt: new Date().toISOString()
